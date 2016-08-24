@@ -38,15 +38,54 @@ app.listen(config.get('port'), function () {
   console.log("Example app listening on port "+config.get('port')+"!");
 });
 
+
+async.parallel({
+  group_profiles: function(callback) {
+    /*
+    CCB.api_paged("group_profiles", function (doc) {
+      console.log(doc.toString());
+      callback(null, doc);
+    }, {include_participants: false}).on('error', function(err){
+      callback(err);
+    });
+    */
+    callback(null, null);
+  }, event_profiles: function(callback) {
+    CCB.api("event_profiles", function (doc) {
+      console.log(doc.toString());
+      callback(null, doc);
+    }).on('error', function(err){
+      callback(err);
+    });
+  }, process_list: function(callback) {
+    CCB.api("process_list", function (doc) {
+      console.log(doc.toString());
+      callback(null, doc);
+    }).on('error', function(err){
+      callback(err);
+    });
+  }
+}, function (err, result) {
+  if (err) {
+    console.log("Errors:" + err);
+  }
+  console.log(JSON.stringify(result));
+});
+
+
+
+
+/*
 async.waterfall([
-  function getDepartmentID(callback) {
+  function getDepartmentID(data, callback) {
     CCB.department_id('EV Youth', function (err, id) {
-      callback(null, {department_id: id});
+      data.department_id = id;
+      callback(null, data);
     }).on('error', function(err){
       callback(err);
     });
   },
-  function listGroups(data, callback) {
+  function async.parallel({
     CCB.api_paged("group_profiles", function (doc) {
       //console.log(doc.toString());
       data.group_profiles_xml = doc;
@@ -54,10 +93,30 @@ async.waterfall([
     }, {include_participants: false}).on('error', function(err){
       callback(err);
     });
+  },
+  function eventProfiles(data, callback) {
+    CCB.api_paged("event_profiles", function (doc) {
+      //console.log(doc.toString());
+      data.event_profiles_xml = doc;
+      callback(null, data);
+    }, {include_participants: false}).on('error', function(err){
+      callback(err);
+    });
+  },
+  function eventProfiles(data, callback) {
+    CCB.api_paged("process_list", function (doc) {
+      //console.log(doc.toString());
+      data.process_list_xml = doc;
+      callback(null, data);
+    }, {include_participants: false}).on('error', function(err){
+      callback(err);
+    });
   }
-  
+
 
 ], function (err, result) {
     console.log(err);
     console.log(result);
 })
+
+*/

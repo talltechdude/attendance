@@ -60,6 +60,23 @@ CCB.prototype.api_group_profiles = function(callback, args) {
   return self;
 };
 
+CCB.prototype.api = function(srv, callback, args) {
+  var self = this;
+  var url = config.get('CCB.baseurl')+"/api.php?srv="+srv;
+  if (args) {
+    url += "&"+querystring.stringify(args);
+  }
+  client.get(url, function (data, response) {
+    var doc = new dom().parseFromString(data.toString(),"text/xml");
+    //console.log(doc.toString());
+    callback(doc);
+  }).on('error', function (err) {
+    console.error('Something went wrong on the request', err.toString());
+    self.emit('error', err.toString());
+  });
+  return self;
+};
+
 CCB.prototype.api_paged = function(srv, callback, args, num) {
   var self = this;
   var url = config.get('CCB.baseurl')+"/api.php?srv="+srv;
@@ -75,7 +92,7 @@ CCB.prototype.api_paged = function(srv, callback, args, num) {
     client.get(url+"&per_page="+num+"&page="+page, function (data, response) {
       var docpart = new dom().parseFromString(data.toString(),"text/xml");
       //console.log(docpart.toString());
-      console.log("Loaded page "+page);
+      console.log("Loaded page "+page+" for "+url);
       if (!doc) {
         doc = docpart;
       } else {
