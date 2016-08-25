@@ -1,3 +1,11 @@
+/******************************************************************************
+██ ███    ███ ██████   ██████  ██████  ████████ ███████
+██ ████  ████ ██   ██ ██    ██ ██   ██    ██    ██
+██ ██ ████ ██ ██████  ██    ██ ██████     ██    ███████
+██ ██  ██  ██ ██      ██    ██ ██   ██    ██         ██
+██ ██      ██ ██       ██████  ██   ██    ██    ███████
+******************************************************************************/
+
 var Client = require('node-rest-client').Client;
 var config = require("config");
 
@@ -20,6 +28,14 @@ function CCB() {
 }
 
 util.inherits(CCB, events.EventEmitter);
+
+/******************************************************************************
+ █████  ██████  ██         ███████ ████████  █████  ████████ ██    ██ ███████
+██   ██ ██   ██ ██         ██         ██    ██   ██    ██    ██    ██ ██
+███████ ██████  ██         ███████    ██    ███████    ██    ██    ██ ███████
+██   ██ ██      ██              ██    ██    ██   ██    ██    ██    ██      ██
+██   ██ ██      ██ ███████ ███████    ██    ██   ██    ██     ██████  ███████
+******************************************************************************/
 
 CCB.prototype.api_status = function(callback) {
   var self = this;
@@ -60,6 +76,14 @@ CCB.prototype.api_group_profiles = function(callback, args) {
   return self;
 };
 
+/******************************************************************************
+ █████  ██████  ██
+██   ██ ██   ██ ██
+███████ ██████  ██
+██   ██ ██      ██
+██   ██ ██      ██
+******************************************************************************/
+
 CCB.prototype.api = function(srv, callback, args) {
   var self = this;
   var url = config.get('CCB.baseurl')+"/api.php?srv="+srv;
@@ -77,7 +101,15 @@ CCB.prototype.api = function(srv, callback, args) {
   return self;
 };
 
-CCB.prototype.api_paged = function(srv, callback, args, num) {
+/******************************************************************************
+ █████  ██████  ██         ██████   █████   ██████  ███████ ██████
+██   ██ ██   ██ ██         ██   ██ ██   ██ ██       ██      ██   ██
+███████ ██████  ██         ██████  ███████ ██   ███ █████   ██   ██
+██   ██ ██      ██         ██      ██   ██ ██    ██ ██      ██   ██
+██   ██ ██      ██ ███████ ██      ██   ██  ██████  ███████ ██████
+******************************************************************************/
+
+CCB.prototype.api_paged = function(srv, callback, args, num, pages) {
   var self = this;
   var url = config.get('CCB.baseurl')+"/api.php?srv="+srv;
   if (args) {
@@ -85,6 +117,9 @@ CCB.prototype.api_paged = function(srv, callback, args, num) {
   }
   if (!num) {
     num = 100;
+  }
+  if (!pages) {
+    pages = -1;
   }
   var doc = null;
 
@@ -103,7 +138,7 @@ CCB.prototype.api_paged = function(srv, callback, args, num) {
       }
       var count = xpath.select('//response/*[@count]', docpart)[0].getAttribute('count');
       console.log(count+" results on page "+page);
-      if (count == num) {
+      if (count == num && (pages == -1 || page < pages)) {
         getPage(page + 1);
       } else {
         var total = xpath.select('//response/*[@count]/*', doc).length;

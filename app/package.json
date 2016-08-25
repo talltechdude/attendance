@@ -10,6 +10,7 @@
   "author": "EV Church",
   "license": "ISC",
   "dependencies": {
+    "assert": "^1.4.1",
     "async": "^2.0.1",
     "cheerio": "^0.20.0",
     "config": "^1.21.0",
