@@ -8,6 +8,9 @@ var async = require('async');
 var ccb = require("./ccb");
 var CCB = new ccb();
 
+var MongoClient = require('mongodb').MongoClient;
+
+
 //CCB.api_status(function(doc) {
 //  console.log(xpath.select('//counter/text()', doc).toString());
 //});
@@ -68,11 +71,22 @@ async.parallel({
 }, function (err, result) {
   if (err) {
     console.log("Errors:" + err);
-  } 
+  }
   console.log(result);
 });
 
 
+// Connection URL
+var url = 'mongodb://mongo:27017/attendance';
+
+// Use connect method to connect to the server
+MongoClient.connect(url, function(err, db) {
+  if (!err) {
+    console.log("Connected succesfully to server");
+    console.log(db);
+  }
+  db.close();
+});
 
 
 /*
