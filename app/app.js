@@ -68,8 +68,8 @@ async.parallel({
 }, function (err, result) {
   if (err) {
     console.log("Errors:" + err);
-  }
-  console.log(JSON.stringify(result));
+  } 
+  console.log(result);
 });
 
 
