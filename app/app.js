@@ -30,9 +30,9 @@ var mongo = require('mongodb').MongoClient;
 ******************************************************************************/
 var db = null;
 // Use connect method to connect to the server
-mongo.connect('mongodb://mongo:27017/attendance', function(err, db) {
+mongo.connect('mongodb://mongo:27017/attendance', function(err, db_obj) {
   assert.equal(null, err);
-  db = this.db;
+  db = db_obj;
   console.log("Connected succesfully to the MongoDB server");
   //console.log(db);
 });
@@ -77,18 +77,20 @@ app.listen(config.get('port'), function () {
 async.parallel({
   group_profiles: function(callback) {
     CCB.api_paged("group_profiles", function (doc) {
-      _.each(xpath.select('//response/group', doc), function (node) {
-        if (xpath.select('department')[0].attrib('id') == config.get('CCB.constants.department_id')) {
+      console.log(doc.toString());
+      _.each(xpath.select('//response/groups/group', doc), function (node) {
+        console.log("Group Department:"+xpath.select('department', node)[0].getAttribute('id')+" (inactive:"+xpath.select('inactive', node)+")");
+        if (xpath.select('inactive', node)[0].value === 'false' && xpath.select('department', node)[0].getAttribute('id') == config.get('CCB.constants.department_id')) {
           console.log(db.collection('inserts').insertOne({group:{
-            id:node.attrib('id'),
-            xml:node.xml()
+            id:node.getAttribute('id'),
+            xml:node
           }}));
         }
       });
 
-      console.log(doc.toString());
-      callback(null, doc);
-    }, {include_participants: false}, 3, 1).on('error', function(err){
+
+      callback(null, null);
+    }, {include_participants: false}, 100, 1).on('error', function(err){
       callback(err);
     });
     //callback(null, null);
