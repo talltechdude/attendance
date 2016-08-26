@@ -39,3 +39,4 @@ jspm_packages
 /keyrings/live/pubring.kbx~
 /keyrings/live/secring.gpg
 /app/config/local.json
+/db/

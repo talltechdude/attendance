@@ -13,13 +13,11 @@ var config = require("config");
 var xpath = require('xpath');
 var async = require('async');
 var assert = require('assert');
+
 var _ = require("underscore");
 
 var ccb = require("./ccb");
 var CCB = new ccb();
-
-var mongo = require('mongodb').MongoClient;
-
 
 /******************************************************************************
 ██████   █████  ████████  █████  ██████   █████  ███████ ███████
@@ -28,20 +26,46 @@ var mongo = require('mongodb').MongoClient;
 ██   ██ ██   ██    ██    ██   ██ ██   ██ ██   ██      ██ ██
 ██████  ██   ██    ██    ██   ██ ██████  ██   ██ ███████ ███████
 ******************************************************************************/
-var db = null;
-// Use connect method to connect to the server
-mongo.connect('mongodb://mongo:27017/attendance', function(err, db_obj) {
-  assert.equal(null, err);
-  db = db_obj;
-  console.log("Connected succesfully to the MongoDB server");
-  //console.log(db);
+var database = require('./lib/database').database(CCB);
+async.waterfall([
+  function connect(callback) {
+    database.connect(function() {
+      callback(null);
+    });
+  },/*
+  function clear_groups(callback) {
+    database.clear_groups(function() {
+      callback(null);
+    });
+  },*/
+  function sync_groups(callback) {
+    database.sync_groups(function() {
+      callback(null);
+    });
+  },
+  function list_groups(callback) {
+    database.list_groups(function() {
+      callback(null);
+    });
+  },
+  function last_updated(callback) {
+    database.last_updated(function() {
+      callback(null);
+    });
+  }
+], function (err, result) {
+  if (err) {
+    console.log("Errors: " + err);
+  }
+  console.log("Results: " + result);
 });
+
 
 // do app specific cleaning before exiting
 process.on('exit', function () {
-  if (db != null) {
-    console.log("Closing app");
-    db.close();
+  console.log("Closing app");
+  if (database != null) {
+    database.close();
   }
 });
 
@@ -74,8 +98,10 @@ app.listen(config.get('port'), function () {
 });
 
 
+
 async.parallel({
   group_profiles: function(callback) {
+    /*
     CCB.api_paged("group_profiles", function (doc) {
       console.log(doc.toString());
       _.each(xpath.select('//response/groups/group', doc), function (node) {
@@ -93,7 +119,8 @@ async.parallel({
     }, {include_participants: false}, 100, 1).on('error', function(err){
       callback(err);
     });
-    //callback(null, null);
+    */
+    callback(null, null);
   }, event_profiles: function(callback) {
     callback(null, null);
     /*
