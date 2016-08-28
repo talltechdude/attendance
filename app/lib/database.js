@@ -107,13 +107,33 @@ exports.database = function database(_CCB) {
         });
       },
       function (callback) {
-        DB.collection('groups').find({}).each(function(err, group){
-          assert.equal(err, null);
-          if (group == null) return callback();
+        var q = async.queue(function(group, callback){
+          console.log("Loading participants of group "+group.name+" ("+group.id+")");
+          var args = {id:group.id};
+          if (lastUpdate) {
+            args.modified_since = lastUpdate;
+          }
+          group.participants = [];
           CCB.api("group_participants", function(doc) {
-            console.log(doc);
-            //USE ASYNC to get all the participants in parralel and wait till all are done before continuing
-          }, {id:group.id});
+            //console.log(doc.toString());
+            _.each(xpath.select('//groups/group/participants/participant', doc), function (node) {
+              console.log(CCB.node_text('name', node));
+              group.participants.push({id:CCB.node_attribute('.', 'id',node),
+                name:CCB.node_text('name', node),
+                status:{id:CCB.node_attribute('status', 'id', node), value:CCB.node_text('status', node)}
+              });
+            });
+            console.log(group);
+            callback();
+          }, args);
+        }, 1);
+        q.drain = callback;
+
+        DB.collection('groups').find({}, {_id:0, xml:0}).each(function(err, group){
+          assert.equal(err, null);
+          if (group != null) {
+            q.push(group, function(){});
+          }
         });
       }
     ], function (err) {
