@@ -29,6 +29,8 @@ function CCB() {
 
 util.inherits(CCB, events.EventEmitter);
 
+//// http://designccb.s3.amazonaws.com/helpdesk/files/official_docs/api.html
+
 /******************************************************************************
  █████  ██████  ██         ███████ ████████  █████  ████████ ██    ██ ███████
 ██   ██ ██   ██ ██         ██         ██    ██   ██    ██    ██    ██ ██
@@ -150,10 +152,24 @@ CCB.prototype.api_paged = function(srv, callback, args, num, pages) {
       self.emit('error', err.toString());
     });
   }
-  getPage(1);
+  getPage(5);
   return self;
 }
 
+CCB.prototype.node_text = function(xp, doc) {
+  var node = xpath.select(xp, doc);
+  if (!node || !node.length) return null;
+  if (!node[0].childNodes || !node[0].childNodes.length) return null;
+  if (node[0].childNodes[0].nodeValue) return node[0].childNodes[0].nodeValue.toString();
+  return null;
+}
+
+CCB.prototype.node_attribute = function(xp, attrib, doc) {
+  var node = xpath.select(xp, doc);
+  if (!node || !node.length) return null;
+  if (node[0].getAttribute(attrib)) return node[0].getAttribute(attrib).toString();
+  return null;
+}
 
 CCB.prototype.department_id = function (name, callback) {
   var self = this;

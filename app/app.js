@@ -27,31 +27,21 @@ var CCB = new ccb();
 ██████  ██   ██    ██    ██   ██ ██████  ██   ██ ███████ ███████
 ******************************************************************************/
 var database = require('./lib/database').database(CCB);
-async.waterfall([
-  function connect(callback) {
-    database.connect(function() {
-      callback(null);
-    });
-  },/*
-  function clear_groups(callback) {
-    database.clear_groups(function() {
-      callback(null);
-    });
-  },*/
-  function sync_groups(callback) {
-    database.sync_groups(function() {
-      callback(null);
-    });
+async.series([
+  function(callback) {
+    database.connect(callback);
   },
-  function list_groups(callback) {
-    database.list_groups(function() {
-      callback(null);
-    });
+  function(callback) {
+    database.clear_groups(callback);
   },
-  function last_updated(callback) {
-    database.last_updated(function() {
-      callback(null);
-    });
+  function(callback) {
+    database.sync_groups(callback);
+  },
+  function(callback) {
+    database.list_groups(callback);
+  },
+  function(callback) {
+    database.last_updated(callback);
   }
 ], function (err, result) {
   if (err) {

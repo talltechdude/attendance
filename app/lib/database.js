@@ -22,7 +22,13 @@ exports.database = function database(_CCB) {
   self.CCB = _CCB;
   events.EventEmitter.call(this);
 
-
+  /*
+   ██████ ██      ███████  █████  ██████       ██████  ██████   ██████  ██    ██ ██████  ███████
+  ██      ██      ██      ██   ██ ██   ██     ██       ██   ██ ██    ██ ██    ██ ██   ██ ██
+  ██      ██      █████   ███████ ██████      ██   ███ ██████  ██    ██ ██    ██ ██████  ███████
+  ██      ██      ██      ██   ██ ██   ██     ██    ██ ██   ██ ██    ██ ██    ██ ██           ██
+   ██████ ███████ ███████ ██   ██ ██   ██      ██████  ██   ██  ██████   ██████  ██      ███████
+  */
   this.clear_groups = function(callback) {
     async.series([
       function (callback) {
@@ -46,7 +52,13 @@ exports.database = function database(_CCB) {
     });
     return this;
   };
-
+  /*
+  ███████ ██    ██ ███    ██  ██████      ██████  ██████   ██████  ██    ██ ██████  ███████
+  ██       ██  ██  ████   ██ ██          ██       ██   ██ ██    ██ ██    ██ ██   ██ ██
+  ███████   ████   ██ ██  ██ ██          ██   ███ ██████  ██    ██ ██    ██ ██████  ███████
+       ██    ██    ██  ██ ██ ██          ██    ██ ██   ██ ██    ██ ██    ██ ██           ██
+  ███████    ██    ██   ████  ██████      ██████  ██   ██  ██████   ██████  ██      ███████
+  */
   this.sync_groups = function(callback) {
     var CCB = self.CCB;
     var DB = self.DB;
@@ -78,9 +90,13 @@ exports.database = function database(_CCB) {
             if (xpath.select('inactive', node)[0].childNodes[0].nodeValue === 'false' && xpath.select('department', node)[0].getAttribute('id') == config.get('CCB.constants.department_id')) {
               //console.log("Group Department:"+xpath.select('department', node)[0].getAttribute('id')+" (inactive:"+util.inspect(xpath.select('inactive', node)[0].childNodes[0].nodeValue)+")");
               DB.collection('groups').insertOne({
-                id:node.getAttribute('id').toString(),
-                name:xpath.select('name', node)[0].childNodes[0].nodeValue.toString(),
-                department:xpath.select('department', node)[0].childNodes[0].nodeValue.toString(),
+                id:CCB.node_attribute('.', 'id', node),
+                name:CCB.node_text('name', node),
+                description: CCB.node_text('description', node),
+                department:{id:CCB.node_attribute('department', 'id', node), name:CCB.node_text('department', node)},
+                leader:{id:CCB.node_attribute('main_leader', 'id', node), name:CCB.node_text('main_leader/full_name', node), email:CCB.node_text('main_leader/email', node)},
+                director:{id:CCB.node_attribute('director', 'id', node), name:CCB.node_text('director/full_name', node), email:CCB.node_text('director/email', node)},
+                modified:{date:CCB.node_text('modified', node), by:{id:CCB.node_attribute('modifier', 'id', node), name:CCB.node_text('modifier', node)}},
                 xml:node.toString()
               });
             }
@@ -88,6 +104,16 @@ exports.database = function database(_CCB) {
           callback();
         }, args, 100, 6).on('error', function(err){
           return callback(err);
+        });
+      },
+      function (callback) {
+        DB.collection('groups').find({}).each(function(err, group){
+          assert.equal(err, null);
+          if (group == null) return callback();
+          CCB.api("group_participants", function(doc) {
+            console.log(doc);
+            //USE ASYNC to get all the participants in parralel and wait till all are done before continuing
+          }, {id:group.id});
         });
       }
     ], function (err) {
@@ -97,30 +123,50 @@ exports.database = function database(_CCB) {
     return self;
   };
 
+  /*
+  ██      ██ ███████ ████████      ██████  ██████   ██████  ██    ██ ██████  ███████
+  ██      ██ ██         ██        ██       ██   ██ ██    ██ ██    ██ ██   ██ ██
+  ██      ██ ███████    ██        ██   ███ ██████  ██    ██ ██    ██ ██████  ███████
+  ██      ██      ██    ██        ██    ██ ██   ██ ██    ██ ██    ██ ██           ██
+  ███████ ██ ███████    ██         ██████  ██   ██  ██████   ██████  ██      ███████
+  */
   this.list_groups = function(callback) {
-    self.DB.collection('groups').find({}).each(function(err, doc) {
+    self.DB.collection('groups').find({}, {_id:0, xml:0}).each(function(err, group) {
       assert.equal(err, null);
-      if (doc != null) {
-        console.log("Group:");
-        console.dir(doc);
+      if (group != null) {
+        console.log("Group: "+group.name+" ("+group.id+")");
+        console.dir(group);
       } else {
         callback();
       }
     });
   };
-
+  /*
+  ██      ██ ███████ ████████     ██       █████  ███████ ████████     ██    ██ ██████  ██████   █████  ████████ ███████ ██████      ██████   █████  ████████ ███████ ███████
+  ██      ██ ██         ██        ██      ██   ██ ██         ██        ██    ██ ██   ██ ██   ██ ██   ██    ██    ██      ██   ██     ██   ██ ██   ██    ██    ██      ██
+  ██      ██ ███████    ██        ██      ███████ ███████    ██        ██    ██ ██████  ██   ██ ███████    ██    █████   ██   ██     ██   ██ ███████    ██    █████   ███████
+  ██      ██      ██    ██        ██      ██   ██      ██    ██        ██    ██ ██      ██   ██ ██   ██    ██    ██      ██   ██     ██   ██ ██   ██    ██    ██           ██
+  ███████ ██ ███████    ██        ███████ ██   ██ ███████    ██         ██████  ██      ██████  ██   ██    ██    ███████ ██████      ██████  ██   ██    ██    ███████ ███████
+  */
   this.last_updated = function(callback) {
     self.DB.collection('lastupdate').find({}).each(function(err, doc) {
       assert.equal(err, null);
       if (doc != null) {
-        console.log("Last updated:");
-        console.dir(doc);
+        console.log("Groups last updated: "+doc.groups);
+        //console.dir(doc);
       } else {
         callback();
       }
     });
   };
 
+  /*
+   ██████  ██████  ███    ██ ███    ██ ███████  ██████ ████████
+  ██      ██    ██ ████   ██ ████   ██ ██      ██         ██
+  ██      ██    ██ ██ ██  ██ ██ ██  ██ █████   ██         ██
+  ██      ██    ██ ██  ██ ██ ██  ██ ██ ██      ██         ██
+   ██████  ██████  ██   ████ ██   ████ ███████  ██████    ██
+  */
   this.connect = function(callback) {
     // Use connect method to connect to the server
     mongo.connect('mongodb://mongo:27017/attendance', function(err, db) {
@@ -130,7 +176,13 @@ exports.database = function database(_CCB) {
       callback();
     });
   };
-
+  /*
+   ██████ ██       ██████  ███████ ███████
+  ██      ██      ██    ██ ██      ██
+  ██      ██      ██    ██ ███████ █████
+  ██      ██      ██    ██      ██ ██
+   ██████ ███████  ██████  ███████ ███████
+  */
   this.close = function(callback) {
     if (self.DB) {
       self.DB.close();
