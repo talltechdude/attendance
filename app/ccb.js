@@ -92,7 +92,9 @@ CCB.prototype.api = function(srv, callback, args) {
   if (args) {
     url += "&"+querystring.stringify(args);
   }
+
   client.get(url, function (data, response) {
+    console.log("Loaded "+url);
     var doc = new dom().parseFromString(data.toString(),"text/xml");
     //console.log(doc.toString());
     callback(doc);

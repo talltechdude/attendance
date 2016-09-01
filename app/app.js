@@ -30,18 +30,21 @@ var database = require('./lib/database').database(CCB);
 async.series([
   function(callback) {
     database.connect(callback);
-  },
+  },/*
   function(callback) {
     database.clear_groups(callback);
-  },
+  },*/
   function(callback) {
     database.sync_groups(callback);
   },
   function(callback) {
-    database.list_groups(callback);
+    database.print_groups(callback);
   },
   function(callback) {
     database.last_updated(callback);
+  },
+  function(callback) {
+    database.sync_queues(callback);
   }
 ], function (err, result) {
   if (err) {
@@ -77,6 +80,18 @@ app.get('/ccb_api_status', function (req, res) {
       status: "error",
       error_message: err.toString()
     });
+  });
+});
+
+app.get('/groups', function (req, res) {
+  database.list_groups(function(groups) {
+    res.send(groups);
+  });
+});
+
+app.get('/participants/:id', function (req, res) {
+  database.list_group_participants(req.params.id, function(participants) {
+    res.send(participants);
   });
 });
 

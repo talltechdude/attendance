@@ -89,7 +89,7 @@ exports.database = function database(_CCB) {
             //console.log("Group Department: "+xpath.select('department', node)[0].getAttribute('id')+"=="+config.get('CCB.constants.department_id')+" (inactive:"+util.inspect(xpath.select('inactive', node)[0].childNodes[0].nodeValue)+")");
             if (xpath.select('inactive', node)[0].childNodes[0].nodeValue === 'false' && xpath.select('department', node)[0].getAttribute('id') == config.get('CCB.constants.department_id')) {
               //console.log("Group Department:"+xpath.select('department', node)[0].getAttribute('id')+" (inactive:"+util.inspect(xpath.select('inactive', node)[0].childNodes[0].nodeValue)+")");
-              DB.collection('groups').insertOne({
+              DB.collection('groups').updateOne({id:CCB.node_attribute('.', 'id', node)}, {
                 id:CCB.node_attribute('.', 'id', node),
                 name:CCB.node_text('name', node),
                 description: CCB.node_text('description', node),
@@ -98,7 +98,7 @@ exports.database = function database(_CCB) {
                 director:{id:CCB.node_attribute('director', 'id', node), name:CCB.node_text('director/full_name', node), email:CCB.node_text('director/email', node)},
                 modified:{date:CCB.node_text('modified', node), by:{id:CCB.node_attribute('modifier', 'id', node), name:CCB.node_text('modifier', node)}},
                 xml:node.toString()
-              });
+              }, {upsert: true});
             }
           });
           callback();
@@ -110,35 +110,49 @@ exports.database = function database(_CCB) {
         var q = async.queue(function(group, callback){
           console.log("Loading participants of group "+group.name+" ("+group.id+")");
           var args = {id:group.id};
-          if (lastUpdate) {
+          if (lastUpdate && group.participants && group.participants.length > 0) {
             args.modified_since = lastUpdate;
+          } else {
+            group.participants = [];
+            group.leaders = [];
           }
-          group.participants = [];
-          group.leaders = [];
+
           CCB.api("group_participants", function(doc) {
             //console.log(doc.toString());
-            _.each(xpath.select('//groups/group/participants/participant', doc), function (node) {
-              console.log(CCB.node_text('name', node));
-              group.participants.push({id:CCB.node_attribute('.', 'id',node),
-                name:CCB.node_text('name', node),
-                status:{id:CCB.node_attribute('status', 'id', node), value:CCB.node_text('status', node)}
-              });
-              if (CCB.node_attribute('status', 'id', node) === '1') { //Group Leaders
-                group.leaders.push({id:CCB.node_attribute('.', 'id',node),
+            //console.log(CCB.node_attribute('//groups/group/participants', 'count', doc));
+            if (parseInt(CCB.node_attribute('//groups/group/participants', 'count', doc)) > 0) {
+              group.participants = [];
+              group.leaders = [];
+              _.each(xpath.select('//groups/group/participants/participant', doc), function (node) {
+                //console.log(CCB.node_text('name', node));
+                group.participants.push({id:CCB.node_attribute('.', 'id',node),
                   name:CCB.node_text('name', node),
                   status:{id:CCB.node_attribute('status', 'id', node), value:CCB.node_text('status', node)}
                 });
-              }
-            });
-            console.log(JSON.stringify(group, null, 2));
-            callback();
+                if (CCB.node_attribute('status', 'id', node) === '1') { //Group Leaders
+                  group.leaders.push({id:CCB.node_attribute('.', 'id',node),
+                    name:CCB.node_text('name', node),
+                    email:CCB.node_text('email', node),
+                    status:{id:CCB.node_attribute('status', 'id', node), value:CCB.node_text('status', node)}
+                  });
+                }
+              });
+              DB.collection('groups').updateOne({id:group.id}, { $set : {participants: group.participants, leaders: group.leaders}}).then(function() {
+                callback();
+              }, function(err) {
+                console.log("Error: "+err);
+                callback();
+              });
+            } else {
+              callback();
+            }
           }, args);
-        }, 1);
+        }, 4);
         q.drain = callback;
 
         DB.collection('groups').find({}, {_id:0, xml:0}).each(function(err, group){
           assert.equal(err, null);
-          if (group != null) {
+          if (group != null && group.id != 1533) {
             q.push(group, function(){});
           }
         });
@@ -150,6 +164,66 @@ exports.database = function database(_CCB) {
     return self;
   };
 
+  this.sync_queues = function(callback) {
+    var CCB = self.CCB;
+    var DB = self.DB;
+    var lastUpdate;
+    console.log("Beginning process queue sync...");
+    async.series([
+      function (callback) {
+        console.log("Finding last updated date");
+        DB.collection('lastupdate').findOne({queues: {$exists:true}}).then(function (res){
+          if (res) {
+            lastUpdate = res.groups;
+          }
+          console.log("Finding last update date [done]");
+          callback();
+        });
+      },
+      function (callback) {
+        console.log("Fetching process list");
+        CCB.api("process_list", function (doc) {
+          console.log(doc.toString());
+          _.each(xpath.select('//processes/process', doc), function (node) {
+            //console.log(node.toString());
+            //console.log(CCB.node_text('name', node));
+            if (CCB.node_text('name', node).match(/^Yr (\d+) (Boys|Girls)/)) {
+              console.log("Processing "+CCB.node_text('name', node));
+              var qNew = CCB.node_attribute('queues/queue[text()="New at EV Youth"]', 'id', node);
+              console.log("New at EV Youth Q: "+qNew);
+
+
+
+            }
+          });
+          console.log("Done");
+          callback();
+        });
+      }
+    ]);
+    callback();
+  };
+
+  /*
+  ██████  ██████  ██ ███    ██ ████████      ██████  ██████   ██████  ██    ██ ██████  ███████
+  ██   ██ ██   ██ ██ ████   ██    ██        ██       ██   ██ ██    ██ ██    ██ ██   ██ ██
+  ██████  ██████  ██ ██ ██  ██    ██        ██   ███ ██████  ██    ██ ██    ██ ██████  ███████
+  ██      ██   ██ ██ ██  ██ ██    ██        ██    ██ ██   ██ ██    ██ ██    ██ ██           ██
+  ██      ██   ██ ██ ██   ████    ██         ██████  ██   ██  ██████   ██████  ██      ███████
+  */
+  this.print_groups = function(callback) {
+    self.DB.collection('groups').find({}, {_id:0, xml:0}).each(function(err, group) {
+      assert.equal(err, null);
+      if (group != null) {
+        console.log("Group: "+group.name+" ("+group.id+")");
+        //console.log(JSON.stringify(group));
+        //console.dir(group);
+      } else {
+        callback();
+      }
+    });
+  };
+
   /*
   ██      ██ ███████ ████████      ██████  ██████   ██████  ██    ██ ██████  ███████
   ██      ██ ██         ██        ██       ██   ██ ██    ██ ██    ██ ██   ██ ██
@@ -158,13 +232,39 @@ exports.database = function database(_CCB) {
   ███████ ██ ███████    ██         ██████  ██   ██  ██████   ██████  ██      ███████
   */
   this.list_groups = function(callback) {
+    var groups = [];
     self.DB.collection('groups').find({}, {_id:0, xml:0}).each(function(err, group) {
       assert.equal(err, null);
       if (group != null) {
-        console.log("Group: "+group.name+" ("+group.id+")");
-        console.dir(group);
+        groups.push(group);
+        //console.log("Group: "+group.name+" ("+group.id+")");
+        //console.log(JSON.stringify(group));
+        //console.dir(group);
       } else {
-        callback();
+        callback(groups);
+      }
+    });
+  };
+
+  this.list_group_participants = function(id, callback) {
+    self.DB.collection('groups').findOne({id:id}, {participants:1}).then(function(group) {
+      if (group != null) {
+        callback(group.participants);
+        //console.log("Group: "+group.name+" ("+group.id+")");
+        //console.log(JSON.stringify(group));
+        //console.dir(group);
+      } else {
+        callback(null);
+      }
+    });
+  };
+
+  this.list_leaders = function(id, callback) {
+    self.DB.collection('groups').findOne({id:id}, {leaders:1}).then(function(group) {
+      if (group != null) {
+        callback(group.leaders);
+      } else {
+        callback(null);
       }
     });
   };
